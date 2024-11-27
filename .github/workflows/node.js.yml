@@ -10,23 +10,12 @@ jobs:
   run-test:
     runs-on: ubuntu-latest
     steps:
-      # Step 1: Checkout code
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
 
-      # Step 2: Setup K6 environment
       - name: Setup K6
         uses: grafana/setup-k6-action@v1.1.0
-
-      # Step 3: Run k6 performance test
       - name: Run local k6 test
         uses: grafana/run-k6-action@v1.1.3
         with:
-          path: src/test/my_k6_test.js
-
-      # Step 4: Upload k6 report (se necessário)
-      - name: Upload k6 report
-        uses: actions/upload-artifact@v3
-        with:
-          name: k6-report
-          path: ./src/test/results/report.html  # ou o caminho do seu arquivo de relatório
+          path: src/tests
