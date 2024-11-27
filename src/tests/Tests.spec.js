@@ -4,18 +4,24 @@ import http from 'k6/http';
 import { check } from 'k6';
 import { Trend, Rate } from 'k6/metrics';
 
-export const getContactsDuration = new Trend('get_contacts', true);
-export const RateContentOK = new Rate('content_OK');
+// Métrica para duração das chamadas GET
+export const getDurationTrend = new Trend('get_duration', true);
+// Métrica para taxa de status code 200 (sucesso)
+export const statusCode200Rate = new Rate('status_code_200');
 
 export const options = {
   thresholds: {
-    http_req_failed: ['rate<0.30'],
-    get_contacts: ['p(99)<500'],
-    content_OK: ['rate>0.95']
+    // 95% das requisições devem ser concluídas em menos de 5700ms
+    get_duration: ['p(95)<5700'],
+    // Menos de 12% das requisições devem falhar
+    http_req_failed: ['rate<0.12'],
+    // 95% ou mais das requisições devem retornar status 200
+    status_code_200: ['rate>0.95']
   },
   stages: [
-    { duration: '10s', target: 5 },
-    { duration: '20s', target: 15 }
+    { duration: '1m', target: 10 },
+    { duration: '3m', target: 300 },
+    { duration: '1m', target: 0 }
   ]
 };
 
@@ -27,9 +33,10 @@ export function handleSummary(data) {
 }
 
 export default function () {
-  const baseUrl = 'https://test.k6.io/';
+  const baseUrl = 'https://api.spacexdata.com/v4/launches';
 
   const params = {
+    timeout: '60s',
     headers: {
       'Content-Type': 'application/json'
     }
@@ -39,11 +46,14 @@ export default function () {
 
   const res = http.get(`${baseUrl}`, params);
 
-  getContactsDuration.add(res.timings.duration);
+  // Adicionando a duração da requisição à métrica Trend
+  getDurationTrend.add(res.timings.duration);
 
-  RateContentOK.add(res.status === OK);
+  // Verificando se o status code é 200 e adicionando à métrica Rate
+  statusCode200Rate.add(res.status === OK);
 
+  // Validação do status code 200
   check(res, {
-    'GET Contacts - Status 200': () => res.status === OK
+    'GET Launches - Status 200': () => res.status === OK
   });
 }
